@@ -2,255 +2,263 @@ import pgzrun
 import random
 import math
 
+
+""" CONFIGURATION """
+
 WIDTH = 1200
 HEIGHT = 1200
 
-statek = Actor("statek")
-statek.x = WIDTH / 2
-statek.y = HEIGHT - 60
-statek.v = 2
-statek.va = 2
-statek.ac = 0.2
-statek.maxv = 8
-statek.angle = 0
-statek.zycia = 3
-statek.czas = 0
+MARGIN = 20
+NEW_UFO_PROBABILITY = 0.01
+UFO_DIRECTION_CHANGE_PROBABILITY = 0.05
 
-margines = 20
+""" VARIABLES """
 
-meteory = []
+player = Actor("ship1")
+player.x = WIDTH / 2
+player.y = HEIGHT - 60
+player.v = 2
+player.va = 2
+player.ac = 0.2
+player.maxv = 8
+player.angle = 0
+player.lifes = 3
+player.time = 0
 
-pociski = []
+ufos_list = []
 
-wybuchy = []
+player_lasers_list = []
 
-zycia = [Actor("zycie", pos=(20, 20)), Actor("zycie", pos=(60, 20)), Actor("zycie", pos=(100, 20))]
+explosions_list = []
 
-lowca = Actor("statek2")
-lowca.x = -500
-lowca.y = 0
-lowca.v = 0.5
-lowca.ac = 0.001
+player_lifes_list = []
+
+
+""" DRAW """
 
 
 def draw():
     screen.fill((0, 0, 0))
 
-    draw_wybuchy()
+    draw_actors_list(explosions_list)
+    draw_actors_list(ufos_list)
+    draw_actors_list(player_lasers_list)
+    draw_actors_list(player_lifes_list)
 
-    draw_meteory()
+    player.draw()
 
-    draw_pociski()
+    if player.lifes < 1:
+        screen.draw.text("GAME OVER", center=(
+            WIDTH / 2, HEIGHT / 2), fontsize=100, color="red")
 
-    statek.draw()
-
-    draw_zycia()
-
-    if statek.zycia < 1:
-        screen.draw.text("GAME OVER", center=(WIDTH / 2, HEIGHT / 2), fontsize=100, color="red")
-
-    screen.draw.text(str(statek.czas), center=(WIDTH / 2, 40), fontsize=80, color="yellow")
-
-    lowca.draw()
+    screen.draw.text(str(player.time), center=(
+        WIDTH / 2, 40), fontsize=80, color="yellow")
 
 
-def draw_meteory():
-    for met in meteory:
-        met.draw()
+def draw_actors_list(actors_list):
+    for actor in actors_list:
+        actor.draw()
 
 
-def draw_pociski():
-    for poc in pociski:
-        poc.draw()
-
-
-def draw_zycia():
-    for i in range(statek.zycia):
-        zycia[i].draw()
-
-
-def draw_wybuchy():
-    for wyb in wybuchy:
-        wyb.draw()
+""" UPDATE """
 
 
 def update():
-    if statek.zycia < 1:
+    if player.lifes < 1:
         return
 
-    if random.randint(0, 300) <= 1:
-        dodaj_meteor()
+    if random.random() <= NEW_UFO_PROBABILITY:
+        add_ufo()
 
-    update_ruchy()
-
-    update_statek()
-
-    update_meteory()
-
-    update_pociski()
-
-    update_trafienia()
-
-    update_kolizje()
-
-    update_lowca()
-
-    update_wybuchy()
+    update_player()
+    update_ufos()
+    update_lasers()
+    update_hits()
+    update_collisions()
+    update_explosions()
 
 
-def update_wybuchy():
-    for wyb in wybuchy[:]:
-        wyb.czas -= 1
+def update_explosions():
+    for explosion in explosions_list[:]:
+        explosion.time -= 1
 
-        if wyb.czas == 0:
-            wyb.numer += 1
-            wyb.czas = 5
+        if explosion.time == 0:
+            explosion.number += 1
+            explosion.time = 5
 
-        if wyb.numer > 9:
-            wybuchy.remove(wyb)
+        if explosion.number > 9:
+            explosions_list.remove(explosion)
             continue
 
-        wyb.image = "wybuch" + str(wyb.numer)
+        explosion.image = "explosion" + str(explosion.number)
 
 
-def update_statek():
-    statek.x += math.sin(math.radians(statek.angle - 180)) * statek.v
-    statek.y += math.cos(math.radians(statek.angle - 180)) * statek.v
-
-    if statek.x > WIDTH + margines:
-        statek.x = -margines
-
-    if statek.x < -margines:
-        statek.x = WIDTH + margines
-
-    if statek.y < -margines:
-        statek.y = HEIGHT + margines
-
-    if statek.y > HEIGHT + margines:
-        statek.y = -margines
+def update_player():
+    update_player_moves()
+    move_actor(player)
+    move_to_bounds(player)
 
 
-def update_ruchy():
+def update_player_moves():
     if keyboard.A:
-        statek.angle += statek.va
+        player.angle += player.va
 
     if keyboard.D:
-        statek.angle -= statek.va
+        player.angle -= player.va
 
     if keyboard.W:
-        statek.v += statek.ac
-        if statek.v > statek.maxv:
-            statek.v = statek.maxv
+        player.v += player.ac
+        if player.v > player.maxv:
+            player.v = player.maxv
 
     if keyboard.S:
-        statek.v -= statek.ac
-        if statek.v < 0:
-            statek.v = 0
+        player.v -= player.ac
+        if player.v < 0:
+            player.v = 0
 
 
-def update_meteory():
-    for met in meteory:
-        met.x += math.sin(math.radians(met.angle - 180)) * met.v
-        met.y += math.cos(math.radians(met.angle - 180)) * met.v
-        if met.x > WIDTH + margines:
-            met.x = -margines
-
-        if met.x < -margines:
-            met.x = WIDTH + margines
-
-        if met.y < -margines:
-            met.y = HEIGHT + margines
-
-        if met.y > HEIGHT + margines:
-            met.y = -margines
+def update_ufos():
+    for ufo in ufos_list:
+        move_actor(ufo)
+        move_to_bounds(ufo)
+        update_ufo_angle(ufo)
 
 
-def update_pociski():
-    for poc in pociski:
-        poc.x += math.sin(math.radians(poc.angle - 180)) * poc.v
-        poc.y += math.cos(math.radians(poc.angle - 180)) * poc.v
+def update_ufo_angle(ufo):
+    if random.random() <= UFO_DIRECTION_CHANGE_PROBABILITY:
+        ufo.desired_angle = random.randint(1, 360)
 
-        if poc.x > WIDTH + margines or poc.x < -margines:
-            pociski.remove(poc)
-
-        if poc.y > HEIGHT + margines or poc.y < -margines:
-            pociski.remove(poc)
+    if ufo.angle < ufo.desired_angle:
+        ufo.angle += 1
+    elif ufo.angle > ufo.desired_angle:
+        ufo.angle -= 1
 
 
-def update_trafienia():
-    for poc in pociski:
-        for met in meteory:
-            if met.colliderect(poc):
-                dodaj_wybuch(met.x, met.y)
-                meteory.remove(met)
-                pociski.remove(poc)
+def update_lasers():
+    for laser in player_lasers_list:
+        move_actor(laser)
+
+        if laser.x > WIDTH + MARGIN or laser.x < -MARGIN:
+            player_lasers_list.remove(laser)
+
+        if laser.y > HEIGHT + MARGIN or laser.y < -MARGIN:
+            player_lasers_list.remove(laser)
 
 
-def update_kolizje():
-    for met in meteory:
-        if statek.collidepoint(met.pos):
-            statek.zycia -= 1
-            if statek.zycia == 0:
+def update_hits():
+    update_player_lasers_hits(ufos_list)
+
+
+def update_player_lasers_hits(enemy_list):
+    for laser in player_lasers_list[:]:
+        for enemy in enemy_list[:]:
+            if enemy.colliderect(laser):
+                add_explosion(enemy.x, enemy.y)
+                enemy_list.remove(enemy)
+                player_lasers_list.remove(laser)
+                break
+
+
+def update_collisions():
+    for ufo in ufos_list[:]:
+        if player.collidepoint(ufo.pos):
+            ufos_list.remove(ufo)
+            add_explosion(ufo.x, ufo.y)
+            player.lifes -= 1
+            player_lifes_list.pop()
+            if player.lifes == 0:
                 sounds.game_over.play()
-            meteory.remove(met)
-            break
+                return
 
 
-def update_lowca():
-    lowca.angle = lowca.angle_to(statek.pos) - 90
-    lowca.x += math.sin(math.radians(lowca.angle - 180)) * lowca.v
-    lowca.y += math.cos(math.radians(lowca.angle - 180)) * lowca.v
-    lowca.v += lowca.ac
-
-    if lowca.collidepoint(statek.pos):
-        statek.zycia = 0
-        sounds.game_over.play()
+""" EVENTS """
 
 
 def on_key_down(key):
     if key == keys.SPACE:
-        dodaj_pocisk()
+        add_player_laser()
         sounds.laser.play()
 
 
-def dodaj_pocisk():
-    poc = Actor("laser2")
-    poc.angle = statek.angle
-    poc.x = statek.x
-    poc.y = statek.y
-    poc.v = 10
-    pociski.append(poc)
+""" HELPERS """
 
 
-def dodaj_meteor():
-    grafika = random.choice(["ufo1", "ufo2", "ufo3", "ufo4"])
-    met = Actor(grafika)
+def move_actor(actor):
+    actor.x += math.sin(math.radians(actor.angle - 180)) * actor.v
+    actor.y += math.cos(math.radians(actor.angle - 180)) * actor.v
 
-    strona = random.randint(1, 2)
-    if strona == 1:
-        met.x = random.choice([-margines, WIDTH + margines])
-        met.y = random.randint(margines, HEIGHT - margines)
+
+def move_to_bounds(actor):
+    if actor.x > WIDTH + MARGIN:
+        actor.x = -MARGIN
+
+    if actor.x < -MARGIN:
+        actor.x = WIDTH + MARGIN
+
+    if actor.y < -MARGIN:
+        actor.y = HEIGHT + MARGIN
+
+    if actor.y > HEIGHT + MARGIN:
+        actor.y = -MARGIN
+
+
+def add_player_laser():
+    laser = Actor("laser2")
+    laser.angle = player.angle
+    laser.x = player.x
+    laser.y = player.y
+    laser.v = 10
+    player_lasers_list.append(laser)
+
+
+def add_ufo():
+    image = random.choice(["ufo1", "ufo2", "ufo3", "ufo4"])
+    ufo = Actor(image)
+
+    side = random.randint(1, 2)
+
+    if side == 1:
+        ufo.x = random.choice([-MARGIN, WIDTH + MARGIN])
+        ufo.y = random.randint(MARGIN, HEIGHT - MARGIN)
     else:
-        met.x = random.randint(margines, WIDTH - margines)
-        met.y = random.choice([-margines, HEIGHT + margines])
-    met.v = random.randint(2, 10)
-    met.angle = random.randint(0, 360)
-    meteory.append(met)
+        ufo.x = random.randint(MARGIN, WIDTH - MARGIN)
+        ufo.y = random.choice([-MARGIN, HEIGHT + MARGIN])
+
+    ufo.v = random.randint(2, 10)
+    ufo.angle = random.randint(0, 360)
+    ufo.desired_angle = ufo.angle
+    ufos_list.append(ufo)
 
 
-def dodaj_wybuch(x, y):
-    wyb = Actor("wybuch1")
-    wyb.numer = 1
-    wyb.czas = 5
-    wyb.x = x
-    wyb.y = y
-    wybuchy.append(wyb)
+def add_explosion(x, y):
+    explosion = Actor("explosion1")
+    explosion.number = 1
+    explosion.time = 5
+    explosion.x = x
+    explosion.y = y
+    explosions_list.append(explosion)
 
 
-def zwieksz_czas():
-    if statek.zycia > 0:
-        statek.czas += 1
+def increase_time():
+    if player.lifes > 0:
+        player.time += 1
 
 
-clock.schedule_interval(zwieksz_czas, 1)
+""" INITIALIZATION """
+
+
+def init():
+    init_player_lifes()
+    clock.schedule_interval(increase_time, 1)
+
+
+def init_player_lifes():
+    for i in range(player.lifes):
+        life = Actor("life")
+        life.x = MARGIN + i * 2 * MARGIN
+        life.y = MARGIN
+        player_lifes_list.append(life)
+
+
+init()
 pgzrun.go()
