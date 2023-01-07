@@ -156,6 +156,7 @@ def update_player_lasers_hits(enemy_list):
                 add_explosion(enemy.x, enemy.y)
                 enemy_list.remove(enemy)
                 player_lasers_list.remove(laser)
+                sounds.explosion.play()
                 break
 
 
@@ -169,6 +170,8 @@ def update_collisions():
             if player.lifes == 0:
                 sounds.game_over.play()
                 return
+            
+            sounds.shield.play()
 
 
 """ EVENTS """
