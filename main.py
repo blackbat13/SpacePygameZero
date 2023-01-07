@@ -23,7 +23,7 @@ player.ac = 0.2
 player.maxv = 8
 player.angle = 0
 player.lifes = 3
-player.time = 0
+player.points = 0
 
 ufos_list = []
 
@@ -51,7 +51,7 @@ def draw():
         screen.draw.text("GAME OVER", center=(
             WIDTH / 2, HEIGHT / 2), fontsize=100, color="red")
 
-    screen.draw.text(str(player.time), center=(
+    screen.draw.text(str(player.points), center=(
         WIDTH / 2, 40), fontsize=80, color="yellow")
 
 
@@ -157,6 +157,7 @@ def update_player_lasers_hits(enemy_list):
                 enemy_list.remove(enemy)
                 player_lasers_list.remove(laser)
                 sounds.explosion.play()
+                player.points += 10
                 break
 
 
@@ -242,17 +243,11 @@ def add_explosion(x, y):
     explosions_list.append(explosion)
 
 
-def increase_time():
-    if player.lifes > 0:
-        player.time += 1
-
-
 """ INITIALIZATION """
 
 
 def init():
     init_player_lifes()
-    clock.schedule_interval(increase_time, 1)
 
 
 def init_player_lifes():
